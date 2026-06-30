@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>テスト用HTML/CSSサンプル</title>
+    <style>
+        /* ==============================
+           CSS（デザインの指定）
+        ============================== */
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f6f8;
+            color: #333;
+        }
+
+        /* ヘッダー */
+        header {
+            background-color: #007bff;
+            color: white;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        /* メインコンテンツ */
+        main {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+
+        p {
+            line-height: 1.6;
+        }
+
+        /* ボタン */
+        .btn {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 12px 24px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ==============================
+         HTML（ページの中身）
+    ============================== -->
+    <header>
+        <h1>ようこそ！テストページへ</h1>
+    </header>
+
+    <main>
+        <h2>サンプルの見出しです</h2>
+        <p>これはHTMLとCSSの動作確認を行うためのテスト用サンプルです。背景色や文字の配置、枠線の角丸などがCSSによって設定されています。</p>
+        <p>下のボタンにマウスカーソルを合わせると、ボタンの色が変わるアニメーションも設定されています。</p>
+        
+        <a href="https://mozilla.org" class="btn" target="_blank">HTMLについて詳しく見る</a>
+    </main>
+
+</body>
+</html>
