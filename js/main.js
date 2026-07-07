@@ -1,5 +1,5 @@
 //===============================================================
-// メニュー制御用の関数とイベント設定（※バージョン2026-2）
+// メニュー制御用の関数とイベント設定（※バージョン2025-1）
 //===============================================================
 $(function(){
   //-------------------------------------------------
@@ -46,44 +46,31 @@ $(function(){
       }
     });
 
-    // 子メニューは初期状態で閉じる（ちらつき防止）
-    $menu.find('.ddmenu_parent ul').hide();
-
-    // 万一の再初期化に備えてイベントを解除（多重バインド防止）
-    $menu.find('.ddmenu').off('click.ddmenu');
-    $menu.find('.ddmenu_parent').off('mouseenter.ddmenu mouseleave.ddmenu');
-
-    //---------------------------------------------
-    // ▼ブレイクポイント未満（開閉メニュー時）は
-    //   PCでも「クリックで開閉」に統一（hover無効）
-    //---------------------------------------------
-    $menu.find('.ddmenu').on('click.ddmenu', function(e) {
-      if (!isTouch && $(window).width() >= breakPoint) return; // PC大画面はhover運用
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      const $dropdownMenu = $(this).siblings('ul');
-      if ($dropdownMenu.is(':visible')) {
-        $dropdownMenu.hide();
-      } else {
-        $menu.find('.ddmenu_parent ul').hide(); // 他を閉じる
-        $dropdownMenu.show();
-      }
-    });
-
-    //---------------------------------------------
-    // ▼PC大画面（breakPoint以上）のみ hover で開閉
-    //---------------------------------------------
-    $menu.find('.ddmenu_parent').on('mouseenter.ddmenu', function() {
-      if (isTouch) return;
-      if ($(window).width() < breakPoint) return; // 開閉メニュー時はhover無効
-      $(this).children('ul').show();
-    }).on('mouseleave.ddmenu', function() {
-      if (isTouch) return;
-      if ($(window).width() < breakPoint) return; // 開閉メニュー時はhover無効
-      $(this).children('ul').hide();
-    });
+    // ドロップダウン開閉のイベント設定
+    if (isTouch) {
+      // タッチデバイスの場合 → タップで開閉
+      $menu.find('.ddmenu').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const $dropdownMenu = $(this).siblings('ul');
+        if ($dropdownMenu.is(':visible')) {
+          $dropdownMenu.hide();
+        } else {
+          $menu.find('.ddmenu_parent ul').hide(); // 他を閉じる
+          $dropdownMenu.show();
+        }
+      });
+    } else {
+      // PCの場合 → ホバーで開閉
+      $menu.find('.ddmenu_parent').hover(
+        function() {
+          $(this).children('ul').show();
+        },
+        function() {
+          $(this).children('ul').hide();
+        }
+      );
+    }
   }
 
   //-------------------------------------------------
@@ -97,13 +84,13 @@ $(function(){
         // ▼ ブレイクポイント未満でハンバーガーが開いたら body のスクロール禁止
         //    （メニューが画面いっぱいに fixed 表示されている時に背後をスクロールさせないため）
         if ($(window).width() < breakPoint) {
-          $('body').addClass('noscroll');  // ★追加
+          $('body').addClass('noscroll');
         }
       } else {
         $menu.hide();
         // ▼ ハンバーガーを閉じたらスクロール禁止を解除
         if ($(window).width() < breakPoint) {
-          $('body').removeClass('noscroll');  // ★追加
+          $('body').removeClass('noscroll');
         }
       }
       // ドロップダウン部分も一旦閉じる
@@ -189,213 +176,129 @@ $(function(){
 
 
 //===============================================================
-// スムーススクロール（※バージョン2025-3）
-// 通常タイプ / fixedヘッダー対応 切り替え版
+// スムーススクロール（※バージョン2024-1）※通常タイプ
 //===============================================================
 $(function() {
-
-    //===========================================================
-    // 設定
-    //===========================================================
-    // 'normal' ＝ 通常タイプ（固定ヘッダーなし）
-    // 'fixed' ＝ fixedヘッダー対応
-    var scrollType = 'normal';
-
-    // fixedヘッダー時に位置計算に使う要素（※fixed版を使う際は必ずチェック。画面上部に貼り付くブロックを指定する。）
-    // 例：'header' / '#header' / '.site-header'
-    var fixedHeaderSelector = '#menubar';
-
     // ページ上部へ戻るボタンのセレクター
     var topButton = $('.pagetop');
-
     // ページトップボタン表示用のクラス名
     var scrollShow = 'pagetop-show';
 
-
-    //===========================================================
-    // fixedヘッダーぶんの補正値を取得
-    //===========================================================
-    function getHeaderOffset() {
-
-        // 通常タイプなら補正なし
-        if(scrollType !== 'fixed') {
-            return 0;
-        }
-
-        // 指定要素を取得
-        var $header = $(fixedHeaderSelector);
-
-        // 要素がなければ補正なし
-        if(!$header.length) {
-            return 0;
-        }
-
-        // 画面上でのヘッダー下端位置を取得
-        // 高さ + 上部の余白(topやmarginで見た目上ずれている分)も含めて見られる
-        var rect = $header.get(0).getBoundingClientRect();
-
-        // 念のためマイナスは0にする
-        return Math.max(0, rect.bottom);
-    }
-
-
-    //===========================================================
-    // スムーススクロール本体
-    //===========================================================
+    // スムーススクロールを実行する関数
+    // targetにはスクロール先の要素のセレクターまたは'#'（ページトップ）を指定
     function smoothScroll(target) {
-
-        var scrollTo = 0;
-
-        // '#' の場合はページ最上部へ
-        if(target === '#') {
-            scrollTo = 0;
-
-        } else {
-
-            // スクロール先の要素を取得
-            var $target = $(target);
-
-            // 対象が存在しない場合は何もしない
-            if(!$target.length) {
-                return;
-            }
-
-            // 通常位置から、fixedヘッダー分を引く
-            scrollTo = $target.offset().top - getHeaderOffset();
-
-            // 0未満にならないように補正
-            if(scrollTo < 0) {
-                scrollTo = 0;
-            }
-        }
-
-        // アニメーションでスムーススクロール
+        // スクロール先の位置を計算（ページトップの場合は0、それ以外は要素の位置）
+        var scrollTo = target === '#' ? 0 : $(target).offset().top;
+        // アニメーションでスムーススクロールを実行
         $('html, body').animate({scrollTop: scrollTo}, 500);
     }
 
-	//===========================================================
-	// ページ内リンク / ページトップボタン
-	//===========================================================
-	$('a[href^="#"], .pagetop').click(function(e) {
+    // ページ内リンクとページトップへ戻るボタンにクリックイベントを設定
+    $('a[href^="#"], .pagetop').click(function(e) {
+        e.preventDefault(); // デフォルトのアンカー動作をキャンセル
+        var id = $(this).attr('href') || '#'; // クリックされた要素のhref属性を取得、なければ'#'
+        smoothScroll(id); // スムーススクロールを実行
+    });
 
-		// hrefが無い.pagtopでも '#' 扱いにする
-		var id = $(this).attr('href') || '#';
-
-		// .pagetop 以外の href="#" は無視（その場に止める）
-		if(id === '#' && !$(this).hasClass('pagetop')) {
-			e.preventDefault();
-			return;
-		}
-
-		e.preventDefault();
-		smoothScroll(id);
-	});
-
-    //===========================================================
-    // ページトップボタンの表示切り替え
-    //===========================================================
-    $(topButton).hide();
-
+    // スクロールに応じてページトップボタンの表示/非表示を切り替え
+    $(topButton).hide(); // 初期状態ではボタンを隠す
     $(window).scroll(function() {
-        if($(this).scrollTop() >= 300) {
-            $(topButton).fadeIn().addClass(scrollShow);
+        if($(this).scrollTop() >= 300) { // スクロール位置が300pxを超えたら
+            $(topButton).fadeIn().addClass(scrollShow); // ボタンを表示
         } else {
-            $(topButton).fadeOut().removeClass(scrollShow);
+            $(topButton).fadeOut().removeClass(scrollShow); // それ以外では非表示
         }
     });
 
-
-    //===========================================================
-    // ハッシュ付きURLで開いた時
-    //===========================================================
+    // ページロード時にURLのハッシュが存在する場合の処理
     if(window.location.hash) {
+        // 1. まずブラウザの自動ジャンプを阻止して、トップで待機させる
+        // （これを入れないと、ブラウザによってはガクッと先に移動してしまうため）
         $('html, body').scrollTop(0);
-
+        
+        // 2. 0.5秒待ってから、改めてスムーススクロール実行
         setTimeout(function() {
             smoothScroll(window.location.hash);
-        }, 500);
+        }, 1000);
     }
-
 });
 
 
 //===============================================================
-// 画像・動画アップのパララックス
+// 横スライドインタイプのスライドショー
 //===============================================================
-(() => {
-  "use strict";
+$(function() {
+    $('.slide').each(function() {
+        var $this = $(this);
+        var slides = $this.find('.slide');
+        var slideCount = slides.length;
+        var currentIndex = 0;
+        var isAnimating = false;
 
-  const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reduceMotion) return;
+        // インジケータを表示する要素を取得
+        var indicators = $this.find('.slide-indicators');
 
-  /* =========================================================
-    ▼ここだけ調整（全ブロック共通）
-  ========================================================= */
-  const maxMove     = 80;   // px：上下に動く最大量（大きいほど動く）
-  const speed       = 1;    // 倍率：0.7で弱め、1.3で強め
-  const dir         = 1;    // 1=通常 / -1=逆方向
-  const extraHeight = 240;  // px：黒背景が見える時に増やす（目安：maxMove*2より大きく）
-  /* ========================================================= */
+        // スライドの数に応じたインジケータを生成
+        for (var i = 0; i < slideCount; i++) {
+            indicators.append('<span class="indicator" data-index="' + i + '"></span>');
+        }
 
-  const boxes = Array.from(document.querySelectorAll(".bg-slideup1"));
-  if (!boxes.length) return;
+        // インジケータの初期状態を設定
+        var indicatorElements = indicators.find('.indicator');
+        indicatorElements.eq(currentIndex).addClass('active');
 
-  const items = boxes.map(box => {
-    const move = box.querySelector(".scrollfx-move");
-    if (!move) return null;
-    move.style.setProperty("--fx-extra", `${extraHeight}px`);
-    return { box, move, top: 0, height: 0 };
-  }).filter(Boolean);
+        // 初期状態で全てのスライドに .hidden クラスを追加
+        slides.addClass('hidden');
 
-  if (!items.length) return;
+        // 最初のスライドに .active と .initial クラスを追加し、.hidden クラスを削除
+        slides.eq(currentIndex).addClass('active initial').removeClass('hidden');
 
-  const clamp01 = n => (n < 0 ? 0 : (n > 1 ? 1 : n));
+        // 遅延後に .initial クラスを削除
+        setTimeout(function() {
+            slides.eq(currentIndex).removeClass('initial');
+        }, 50);
 
-  let vh = window.innerHeight || 0;
-  let ticking = false;
+        // インジケータをクリックしたときの動作を設定
+        indicatorElements.on('click', function() {
+            var clickedIndex = $(this).data('index');
 
-  function measure(){
-    vh = window.innerHeight || 0;
-    const scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+            // アニメーション中は操作を受け付けない
+            if (isAnimating) return;
 
-    items.forEach(item => {
-      const r = item.box.getBoundingClientRect();
-      item.top = r.top + scrollY;
-      item.height = r.height || 0;
+            // 現在のスライドと同じ場合は何もしない
+            if (clickedIndex === currentIndex) return;
+
+            // スライドの切り替え
+            changeSlide(clickedIndex);
+        });
+
+        // 自動スライドのタイマー
+        setInterval(function() {
+            var nextIndex = (currentIndex + 1) % slideCount;
+            changeSlide(nextIndex);
+        }, 4000); // 4秒ごとにスライドを切り替える
+
+        function changeSlide(nextIndex) {
+            isAnimating = true;
+
+            // 現在のスライドを左に移動
+            slides.eq(currentIndex).removeClass('active').addClass('left');
+
+            // 次のスライドを表示
+            slides.eq(nextIndex).addClass('active').removeClass('hidden');
+
+            // インジケータの更新
+            indicatorElements.eq(currentIndex).removeClass('active');
+            indicatorElements.eq(nextIndex).addClass('active');
+
+            // アニメーション終了後の処理
+            setTimeout(function() {
+                // 左に移動したスライドに .hidden クラスを追加
+                slides.eq(currentIndex).removeClass('left').addClass('hidden');
+
+                currentIndex = nextIndex;
+                isAnimating = false;
+            }, 700); // cssの「.slide .slide」の行の時間と合わせる
+        }
     });
-
-    requestTick();
-  }
-
-  function update(){
-    ticking = false;
-
-    const scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
-    const viewBottom = scrollY + vh;
-
-    items.forEach(item => {
-      const denom = (vh + item.height) || 1;
-      const p = clamp01((viewBottom - item.top) / denom); // 0..1
-      const t = (p - 0.5) * 2; // -1..+1
-      const y = t * maxMove * speed * dir;
-
-      item.move.style.transform = `translate3d(0, calc(-50% + ${y.toFixed(2)}px), 0)`;
-    });
-  }
-
-  function requestTick(){
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(update);
-  }
-
-  window.addEventListener("scroll", requestTick, { passive: true });
-
-  let resizeTimer = 0;
-  window.addEventListener("resize", () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(measure, 100);
-  });
-
-  window.addEventListener("load", measure);
-})();
+});
